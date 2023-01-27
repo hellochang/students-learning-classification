@@ -1,0 +1,18 @@
+-- Tot actions per user in class
+SELECT userId, COUNT(action) AS tot_actions
+FROM `de-data-science-lake.waterloo_fall_2022.waterloo_events` 
+WHERE classId = 517
+GROUP BY userId
+-- , module.type
+-- module.name, COUNT(userId)
+LIMIT 1000
+
+
+
+-- Home vs. Lecture Access times
+SELECT userId, module.type, COUNT(action) AS tot_actions
+FROM `de-data-science-lake.waterloo_fall_2022.waterloo_events` 
+WHERE classId = 517 and action in ('NEXT', 'GOTO')
+GROUP BY userId, module.type
+-- module.name, COUNT(userId)
+LIMIT 1000

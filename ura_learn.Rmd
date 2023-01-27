@@ -1,0 +1,119 @@
+---
+title: "ura_learn"
+output: pdf_document
+date: '2023-01-20'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+times = read.csv("times_processed.csv")
+head(times)
+names(times)
+```
+
+```{r cars}
+summary(times) 
+# times["module"]
+```
+```{r}
+df = subset(times, select = -c(slideshow, slide, questions, question, instanceUid, destinationPageNumber, module, testRecordId, classId, className, TryAnother_flag, HowDidIDo_flag, moduleSessionPartition))
+df = subset(df, select = -c(score))
+df = subset(df, select = -c(userId))
+
+#  instanceUid, separate by userId, module, question, etc.
+#  note you dropped userId!!!
+df$modulecategory <- as.factor(df$modulecategory)
+df$activity <- as.factor(df$activity)
+df$action <- as.factor(df$action)
+# df$score <- df$score["score"]["current"] / df$score["score"]["possible"]
+head(df)
+df$eventTimestamp <- as.POSIXct(df$eventTimestamp, origin="1970-01-01", tz="EST")
+df$firstUserSessionCreatedDate <- as.POSIXct(df$firstUserSessionCreatedDate, origin="1970-01-01", tz="EST")
+df$lastUserSessionCreatedDate <- as.POSIXct(df$lastUserSessionCreatedDate, origin="1970-01-01", tz="EST")
+df$firstClassActivityDate <- as.POSIXct(df$firstClassActivityDate, origin="1970-01-01", tz="EST")
+df$lastClassActivityDate <- as.POSIXct(df$lastClassActivityDate, origin="1970-01-01", tz="EST")
+
+
+df_no_time = subset(df, select = -c(eventTimestamp, firstUserSessionCreatedDate, lastUserSessionCreatedDate, firstClassActivityDate, lastClassActivityDate))
+
+# pairs(df)
+head(df)
+
+df_corr = subset(df, select = -c(action, activity, modulecategory, firstClassActivityDate))
+# head(df_corr)
+cor(df_corr)
+```
+
+```{r pressure, echo=FALSE}
+library(Hmisc)
+# hist.data.frame(df)
+# since we?? how is it diff from the timeSinceLastEventInModule
+# hist(df$timeSinceLastEvent)
+
+# since we last reviewed current module
+hist(df$timeSinceLastEventInModule/60000, breaks=100, main="Time Since Last Click", xlab="time (min)")
+plot(density(df$timeSinceLastEventInModule/60000), log="y", main="Time Since Last Click", xlab="time (min)")
+library("ggplot2")
+ggplot(df, aes(x = timeSinceLastEventInModule/60000)) + geom_histogram(bins=100, colour = 'red') + scale_x_log10()
+# df$eventTimestamp
+# 
+# head(df$timestamp)
+
+
+
+
+ggplot(data=df, mapping = aes(x = timeSinceLastEventInModule/60000, y = modulecategory)) + 
+  geom_boxplot() +
+  theme_bw()
+
+ggplot(data=df, mapping = aes(x = timeSinceLastEventInModule/60000, y = action)) + 
+  geom_boxplot() +
+  theme_bw()
+plot( x = df$timeSinceLastEventInModule/60000, y = df$action)
+plot( x = df$timeSinceLastEventInModule/60000, y = df$modulecategory)
+
+
+
+
+
+# times$eventTimestamp
+df$timestamp <- strptime(df$eventTimestamp, format="%Y-%m-%d %H:%M:%S")
+df$hours <-  as.numeric(format(df$timestamp, format="%H"))
+
+# Time
+hist(df$hours, main="When are students online?",breaks=24, xlab="Hour in the day")
+# hist(df$timestamp, breaks="days",
+#      xlab = deparse(substitute(x)),
+#      plot = TRUE, freq = FALSE,
+#      start.on.monday = TRUE, format="%Y-%m-%d %H:%M:%S")
+hist(df$timestamp, breaks="hours",
+     xlab = deparse(substitute(x)),
+     plot = TRUE, freq = FALSE,
+     start.on.monday = TRUE, format="%Y-%m-%d %H:%M:%S",
+     main="Termly activities")
+
+# combine sincelast w modulecategory action
+
+
+
+
+#since first or before last
+# hist(sessionDaysSinceFirstClassActivity)
+user_actions = read.csv("data_actions_per_user.csv")
+head(user_actions)
+hist(user_actions$tot_actions, main="Students' Number of Actions", xlab="number of actions")
+```
+
+```{r}
+# unique.array(df$actions)
+library(leaps)
+library(glmnet)
+library(caret)
+regfit.full <- regsubsets(factor(timeSinceLastEventInModule)~., df_no_time)
+reg.summary <- summary(regfit.full)
+reg.summary
+```
+
